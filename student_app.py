@@ -64,9 +64,16 @@ _extract_bundle()
 os.chdir(RUNTIME)
 sys.path.insert(0, str(RUNTIME / "src"))
 # Streamlit reruns this wrapper for every session while imported modules remain
-# cached process-wide. Force the dashboard module to execute for the current
+# cached process-wide.  Force the dashboard module to execute for the current
 # session, including after Community Cloud's prewarming run.
 sys.modules.pop("crypto_quant_engine.dashboard.app", None)
+dashboard_package = sys.modules.get("crypto_quant_engine.dashboard")
+if dashboard_package is not None:
+    # ``from crypto_quant_engine.dashboard import app`` may otherwise reuse the
+    # stale attribute kept on the parent package even after sys.modules is
+    # cleared, leaving later Streamlit sessions with an empty page.
+    dashboard_package.__dict__.pop("app", None)
 entrypoint = RUNTIME / "student_app_impl.py"
 code = compile(entrypoint.read_bytes(), str(entrypoint), "exec")
 exec(code, {"__name__": "__main__", "__file__": str(entrypoint)})
+
