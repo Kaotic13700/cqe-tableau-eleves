@@ -24,10 +24,10 @@ def _bundle_digest() -> str:
     return digest.hexdigest()
 
 
-def _extract_bundle() -> None:
+def _extract_bundle() -> str:
     digest = _bundle_digest()
     if MARKER.exists() and MARKER.read_text(encoding="utf-8").strip() == digest:
-        return
+        return digest
 
     deadline = time.monotonic() + 120
     lock_handle: int | None = None
@@ -36,7 +36,7 @@ def _extract_bundle() -> None:
             lock_handle = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError:
             if MARKER.exists() and MARKER.read_text(encoding="utf-8").strip() == digest:
-                return
+                return digest
             if time.monotonic() >= deadline:
                 raise TimeoutError("Initialisation du paquet Streamlit trop longue.")
             time.sleep(0.1)
@@ -58,11 +58,20 @@ def _extract_bundle() -> None:
     finally:
         os.close(lock_handle)
         LOCK.unlink(missing_ok=True)
+    return digest
 
 
-_extract_bundle()
+bundle_digest = _extract_bundle()
 os.chdir(RUNTIME)
 sys.path.insert(0, str(RUNTIME / "src"))
+# Community Cloud may update the archive without restarting its Python
+# process. Drop modules loaded from the previous archive exactly once per
+# digest so the new collector and chart code are imported from disk.
+if os.environ.get("CQE_LOADED_BUNDLE_DIGEST") != bundle_digest:
+    for module_name in list(sys.modules):
+        if module_name == "crypto_quant_engine" or module_name.startswith("crypto_quant_engine."):
+            sys.modules.pop(module_name, None)
+    os.environ["CQE_LOADED_BUNDLE_DIGEST"] = bundle_digest
 # Streamlit reruns this wrapper for every session while imported modules remain
 # cached process-wide.  Force the dashboard module to execute for the current
 # session, including after Community Cloud's prewarming run.
