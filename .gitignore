@@ -1,0 +1,5 @@
+.app_runtime/
+.app_runtime.lock
+.runtime_data/
+.hosted_runtime_data*/
+.streamlit/secrets.toml

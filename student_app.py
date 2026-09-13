@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import shutil
 import sys
 import time
 import zipfile
@@ -10,7 +9,6 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-# Déploiement macro US : les mises à jour du paquet binaire doivent réveiller le suivi du script.
 BUNDLE = ROOT / "app_bundle.zip"
 RUNTIME = ROOT / ".app_runtime"
 MARKER = RUNTIME / ".bundle.sha256"
@@ -44,10 +42,10 @@ def _extract_bundle() -> str:
 
     try:
         if MARKER.exists() and MARKER.read_text(encoding="utf-8").strip() == digest:
-            return
-        if RUNTIME.exists():
-            shutil.rmtree(RUNTIME)
-        RUNTIME.mkdir(parents=True)
+            return digest
+        # Une mise à jour du code ne doit pas supprimer .runtime_data, où la
+        # collecte du processus hébergé conserve ses observations append-only.
+        RUNTIME.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(BUNDLE) as archive:
             root = RUNTIME.resolve()
             for member in archive.infolist():
