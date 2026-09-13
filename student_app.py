@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
+# Déploiement macro US : les mises à jour du paquet binaire doivent réveiller le suivi du script.
 BUNDLE = ROOT / "app_bundle.zip"
 RUNTIME = ROOT / ".app_runtime"
 MARKER = RUNTIME / ".bundle.sha256"
