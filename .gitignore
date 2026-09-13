@@ -3,3 +3,6 @@
 .runtime_data/
 .hosted_runtime_data*/
 .streamlit/secrets.toml
+__pycache__/
+.pytest_cache/
+testtmp-*/
