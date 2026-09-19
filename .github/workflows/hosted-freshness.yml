@@ -1,0 +1,29 @@
+name: Hosted data freshness
+
+on:
+  schedule:
+    - cron: '11 */4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-freshness
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install 'playwright==1.55.0'
+      - run: python -m playwright install --with-deps chromium
+      - name: Wake the public app and verify observed freshness
+        env:
+          CQE_PUBLIC_URL: https://cqe-btc-eth-eleves.streamlit.app/
+        run: python scripts/verify_hosted_freshness.py
