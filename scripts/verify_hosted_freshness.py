@@ -19,6 +19,7 @@ def observed_age_minutes(text: str, now: datetime) -> float | None:
 
 def main() -> None:
     from playwright.sync_api import sync_playwright
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -28,10 +29,14 @@ def main() -> None:
             app = page.frame_locator("iframe[src*='/~/+/']")
             deadline = time.monotonic() + 180
             while time.monotonic() < deadline:
-                text = app.locator("body").inner_text(timeout=15_000)
                 wake = page.get_by_text("Yes, get this app back up!", exact=False)
                 if wake.count() and wake.first.is_visible():
                     wake.first.click()
+                try:
+                    text = app.locator("body").inner_text(timeout=5_000)
+                except PlaywrightTimeoutError:
+                    page.wait_for_timeout(10_000)
+                    continue
                 age = observed_age_minutes(text, datetime.now(timezone.utc))
                 if "FLUX HÉBERGÉ" in text and age is not None and -2 <= age <= 30:
                     print(f"Hosted feature observation age: {age:.1f} minutes")
