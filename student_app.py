@@ -61,16 +61,22 @@ def _extract_bundle() -> str:
 
 
 bundle_digest = _extract_bundle()
+from hosted_current_macro import install_hosted_memory_readers
+install_hosted_memory_readers(RUNTIME)
+# Retention is confined to the disposable hosted cache.
+from hosted_cache_retention import start_hosted_retention
+start_hosted_retention(RUNTIME / '.runtime_data')
 os.chdir(RUNTIME)
 sys.path.insert(0, str(RUNTIME / "src"))
 # Community Cloud may update the archive without restarting its Python
 # process. Drop modules loaded from the previous archive exactly once per
 # digest so the new collector and chart code are imported from disk.
-if os.environ.get("CQE_LOADED_BUNDLE_DIGEST") != bundle_digest:
+runtime_revision = bundle_digest + ":hosted-memory-retention-v1"
+if os.environ.get("CQE_LOADED_BUNDLE_DIGEST") != runtime_revision:
     for module_name in list(sys.modules):
         if module_name == "crypto_quant_engine" or module_name.startswith("crypto_quant_engine."):
             sys.modules.pop(module_name, None)
-    os.environ["CQE_LOADED_BUNDLE_DIGEST"] = bundle_digest
+    os.environ["CQE_LOADED_BUNDLE_DIGEST"] = runtime_revision
 # Streamlit reruns this wrapper for every session while imported modules remain
 # cached process-wide.  Force the dashboard module to execute for the current
 # session, including after Community Cloud's prewarming run.
